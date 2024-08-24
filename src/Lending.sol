@@ -46,7 +46,19 @@ contract UpsideAcademyLending {
     }
 
     function borrow(address token, uint256 amount) external {
-        
+        if (token == reserveToken){
+            uint256 ethPrice = priceOracle.getPrice(token);
+            uint256 collateralValue = tokenUserDeposits[msg.sender][token] * ethPrice;
+            uint256 borrowable = collateralValue * 75 / 100;
+            require(amount <= borrowable, "check amount");
+
+        } else {
+            uint256 ethPrice = priceOracle.getPrice(token);
+            uint256 collateralValue = tokenUserDeposits[msg.sender][token] * ethPrice;
+            uint256 borrowable = collateralValue * 75 / 100;
+            require(amount <= borrowable, "check amount");
+
+        }
     }
 
     function repay(address token, uint256 amount) external {
@@ -59,17 +71,5 @@ contract UpsideAcademyLending {
 
     function getAccruedSupplyAmount(address token) external returns (uint256) {
         
-    }
-}
-
-contract UpsideOracle {
-    mapping(address => uint256) prices;
-
-    function getPrice(address token) external returns (uint256) {
-        
-    }
-
-    function setPrice(address token, uint256 price) external {
-        prices[token] = price;
     }
 }

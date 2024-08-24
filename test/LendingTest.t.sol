@@ -12,7 +12,7 @@ contract CUSDC is ERC20 {
     }
 }
 
-contract upsideOracle {
+contract UpsideOracle {
     address public operator;
     mapping(address => uint256) prices;
 
@@ -137,32 +137,32 @@ contract Testx is Test {
         vm.stopPrank();
     }
 
-    // function testBorrowWithInsufficientSupplyFails() external {
-    //     supplySmallEtherDepositUser2();
-    //     upsideOracle.setPrice(address(0x0), 99999999999 ether);
+    function testBorrowWithInsufficientSupplyFails() external {
+        supplySmallEtherDepositUser2();
+        upsideOracle.setPrice(address(0x0), 99999999999 ether);
 
-    //     vm.startPrank(user2);
-    //     {
-    //         (bool success,) = address(lending).call(
-    //             abi.encodeWithSelector(UpsideAcademyLending.borrow.selector, address(usdc), 1000 ether)
-    //         );
-    //         assertFalse(success);
-    //         assertTrue(usdc.balanceOf(user2) == 0 ether);
-    //     }
-    //     vm.stopPrank();
-    // }
+        vm.startPrank(user2);
+        {
+            (bool success,) = address(lending).call(
+                abi.encodeWithSelector(UpsideAcademyLending.borrow.selector, address(usdc), 1000 ether)
+            );
+            assertFalse(success);
+            assertTrue(usdc.balanceOf(user2) == 0 ether);
+        }
+        vm.stopPrank();
+    }
 
-    // function testBorrowWithSufficientCollateralSucceeds() external {
-    //     supplyUSDCDepositUser1();
-    //     supplyEtherDepositUser2();
+    function testBorrowWithSufficientCollateralSucceeds() external {
+        supplyUSDCDepositUser1();
+        supplyEtherDepositUser2();
 
-    //     vm.startPrank(user2);
-    //     {
-    //         lending.borrow(address(usdc), 1000 ether);
-    //         assertTrue(usdc.balanceOf(user2) == 1000 ether);
-    //     }
-    //     vm.stopPrank();
-    // }
+        vm.startPrank(user2);
+        {
+            lending.borrow(address(usdc), 1000 ether);
+            assertTrue(usdc.balanceOf(user2) == 1000 ether);
+        }
+        vm.stopPrank();
+    }
 
     // function testBorrowWithSufficientSupplySucceeds() external {
     //     supplyUSDCDepositUser1();
