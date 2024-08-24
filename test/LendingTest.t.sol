@@ -68,12 +68,12 @@ contract Testx is Test {
         assertFalse(success);
     }
 
-    // function testDepositEtherWithInsufficientValueFails() external {
-    //     (bool success,) = address(lending).call{value: 2 ether}(
-    //         abi.encodeWithSelector(UpsideAcademyLending.deposit.selector, address(0x0), 3 ether)
-    //     );
-    //     assertFalse(success);
-    // }
+    function testDepositEtherWithInsufficientValueFails() external {
+        (bool success,) = address(lending).call{value: 2 ether}(
+            abi.encodeWithSelector(UpsideAcademyLending.deposit.selector, address(0x0), 3 ether)
+        );
+        assertFalse(success);
+    }
 
     // function testDepositEtherWithEqualValueSucceeds() external {
     //     (bool success,) = address(lending).call{value: 2 ether}(

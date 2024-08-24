@@ -21,7 +21,20 @@ contract UpsideAcademyLending {
     }
 
     function deposit(address token, uint256 amount) external payable{
-        require(msg.value > 0, "Deposit value error");
+        require(token == reserveToken || msg.value > 0, "Invalid deposit");
+
+        if (msg.value > 0) {
+            require(token == address(0) && msg.value > amount, "check tokens and value");
+            // userDeposits[msg.sender][token] += msg.value;
+            // deposits[token] += msg.value;
+            // totalDeposits += msg.value;
+        } else {
+            require(token == reserveToken && amount > 0, "Amount must be greater than 0");
+            // userDeposits[msg.sender][token] += amount;
+            // deposits[token] += amount;
+            // totalDeposits += amount;
+            // ERC20(token).transferFrom(msg.sender, address(this), amount);
+        }
     }
 
     function withdraw(address token, uint256 amount) external {
