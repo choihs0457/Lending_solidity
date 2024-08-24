@@ -20,7 +20,10 @@ contract UpsideAcademyLending {
     }
 
     function initializeLendingProtocol(address token) external payable {
-        
+        require(token == reserveToken && msg.value > 0, "check tokens and value");
+        ERC20(token).transferFrom(msg.sender, address(this), msg.value);
+        tokenUserDeposits[msg.sender][token] += msg.value;
+        tokenDeposits[token] += msg.value;
     }
 
     function deposit(address token, uint256 amount) external payable{
@@ -31,7 +34,7 @@ contract UpsideAcademyLending {
             tokenUserDeposits[msg.sender][token] += msg.value;
             tokenDeposits[token] += msg.value;
         } else {
-            require(token == reserveToken && amount > 0, "Amount must be greater than 0");
+            require(token == reserveToken && amount > 0, "check tokens and value");
             tokenUserDeposits[msg.sender][token] += amount;
             tokenDeposits[token] += amount;
             ERC20(token).transferFrom(msg.sender, address(this), amount);

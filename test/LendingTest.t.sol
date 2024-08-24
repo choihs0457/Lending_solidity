@@ -99,43 +99,43 @@ contract Testx is Test {
         assertTrue(usdc.balanceOf(address(lending)) == 2000 ether + 1);
     }
 
-    // function supplyUSDCDepositUser1() private {
-    //     usdc.transfer(user1, 100000000 ether);
-    //     vm.startPrank(user1);
-    //     usdc.approve(address(lending), type(uint256).max);
-    //     lending.deposit(address(usdc), 100000000 ether);
-    //     vm.stopPrank();
-    // }
+    function supplyUSDCDepositUser1() private {
+        usdc.transfer(user1, 100000000 ether);
+        vm.startPrank(user1);
+        usdc.approve(address(lending), type(uint256).max);
+        lending.deposit(address(usdc), 100000000 ether);
+        vm.stopPrank();
+    }
 
-    // function supplyEtherDepositUser2() private {
-    //     vm.deal(user2, 100000000 ether);
-    //     vm.prank(user2);
-    //     lending.deposit{value: 100000000 ether}(address(0x00), 100000000 ether);
-    // }
+    function supplyEtherDepositUser2() private {
+        vm.deal(user2, 100000000 ether);
+        vm.prank(user2);
+        lending.deposit{value: 100000000 ether}(address(0x00), 100000000 ether);
+    }
 
-    // function supplySmallEtherDepositUser2() private {
-    //     vm.deal(user2, 100000000 ether);
-    //     vm.startPrank(user2);
-    //     lending.deposit{value: 1 ether}(address(0x00), 1 ether);
-    //     vm.stopPrank();
-    // }
+    function supplySmallEtherDepositUser2() private {
+        vm.deal(user2, 100000000 ether);
+        vm.startPrank(user2);
+        lending.deposit{value: 1 ether}(address(0x00), 1 ether);
+        vm.stopPrank();
+    }
 
-    // function testBorrowWithInsufficientCollateralFails() external {
-    //     supplyUSDCDepositUser1();
-    //     supplySmallEtherDepositUser2();
+    function testBorrowWithInsufficientCollateralFails() external {
+        supplyUSDCDepositUser1();
+        supplySmallEtherDepositUser2();
 
-    //     upsideOracle.setPrice(address(0x0), 1339 ether);
+        upsideOracle.setPrice(address(0x0), 1339 ether);
 
-    //     vm.startPrank(user2);
-    //     {
-    //         (bool success,) = address(lending).call(
-    //             abi.encodeWithSelector(UpsideAcademyLending.borrow.selector, address(usdc), 1000 ether)
-    //         );
-    //         assertFalse(success);
-    //         assertTrue(usdc.balanceOf(user2) == 0 ether);
-    //     }
-    //     vm.stopPrank();
-    // }
+        vm.startPrank(user2);
+        {
+            (bool success,) = address(lending).call(
+                abi.encodeWithSelector(UpsideAcademyLending.borrow.selector, address(usdc), 1000 ether)
+            );
+            assertFalse(success);
+            assertTrue(usdc.balanceOf(user2) == 0 ether);
+        }
+        vm.stopPrank();
+    }
 
     // function testBorrowWithInsufficientSupplyFails() external {
     //     supplySmallEtherDepositUser2();
