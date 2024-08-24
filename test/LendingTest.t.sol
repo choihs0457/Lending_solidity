@@ -75,29 +75,29 @@ contract Testx is Test {
         assertFalse(success);
     }
 
-    // function testDepositEtherWithEqualValueSucceeds() external {
-    //     (bool success,) = address(lending).call{value: 2 ether}(
-    //         abi.encodeWithSelector(UpsideAcademyLending.deposit.selector, address(0x0), 2 ether)
-    //     );
-    //     assertTrue(success);
-    //     assertTrue(address(lending).balance == 2 ether + 1);
-    // }
+    function testDepositEtherWithEqualValueSucceeds() external {
+        (bool success,) = address(lending).call{value: 2 ether}(
+            abi.encodeWithSelector(UpsideAcademyLending.deposit.selector, address(0x0), 2 ether)
+        );
+        assertTrue(success);
+        assertTrue(address(lending).balance == 2 ether + 1);
+    }
 
-    // function testDepositUSDCWithInsufficientValueFails() external {
-    //     usdc.approve(address(lending), 1);
-    //     (bool success,) = address(lending).call(
-    //         abi.encodeWithSelector(UpsideAcademyLending.deposit.selector, address(usdc), 3000 ether)
-    //     );
-    //     assertFalse(success);
-    // }
+    function testDepositUSDCWithInsufficientValueFails() external {
+        usdc.approve(address(lending), 1);
+        (bool success,) = address(lending).call(
+            abi.encodeWithSelector(UpsideAcademyLending.deposit.selector, address(usdc), 3000 ether)
+        );
+        assertFalse(success);
+    }
 
-    // function testDepositUSDCWithEqualValueSucceeds() external {
-    //     (bool success,) = address(lending).call(
-    //         abi.encodeWithSelector(UpsideAcademyLending.deposit.selector, address(usdc), 2000 ether)
-    //     );
-    //     assertTrue(success);
-    //     assertTrue(usdc.balanceOf(address(lending)) == 2000 ether + 1);
-    // }
+    function testDepositUSDCWithEqualValueSucceeds() external {
+        (bool success,) = address(lending).call(
+            abi.encodeWithSelector(UpsideAcademyLending.deposit.selector, address(usdc), 2000 ether)
+        );
+        assertTrue(success);
+        assertTrue(usdc.balanceOf(address(lending)) == 2000 ether + 1);
+    }
 
     // function supplyUSDCDepositUser1() private {
     //     usdc.transfer(user1, 100000000 ether);

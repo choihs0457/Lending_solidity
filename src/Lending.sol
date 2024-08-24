@@ -11,6 +11,9 @@ contract UpsideAcademyLending {
     IPriceOracle public priceOracle;
     address public reserveToken;
 
+    mapping(address => uint256) public tokenDeposits;
+    mapping(address => mapping(address => uint256)) public tokenUserDeposits;
+
     constructor(IPriceOracle upsideOracle, address token) {
         priceOracle = upsideOracle;
         reserveToken = token;
@@ -22,18 +25,16 @@ contract UpsideAcademyLending {
 
     function deposit(address token, uint256 amount) external payable{
         require(token == reserveToken || msg.value > 0, "Invalid deposit");
-
+        
         if (msg.value > 0) {
-            require(token == address(0) && msg.value > amount, "check tokens and value");
-            // userDeposits[msg.sender][token] += msg.value;
-            // deposits[token] += msg.value;
-            // totalDeposits += msg.value;
+            require(token == address(0) && msg.value >= amount, "check tokens and value");
+            tokenUserDeposits[msg.sender][token] += msg.value;
+            tokenDeposits[token] += msg.value;
         } else {
             require(token == reserveToken && amount > 0, "Amount must be greater than 0");
-            // userDeposits[msg.sender][token] += amount;
-            // deposits[token] += amount;
-            // totalDeposits += amount;
-            // ERC20(token).transferFrom(msg.sender, address(this), amount);
+            tokenUserDeposits[msg.sender][token] += amount;
+            tokenDeposits[token] += amount;
+            ERC20(token).transferFrom(msg.sender, address(this), amount);
         }
     }
 
