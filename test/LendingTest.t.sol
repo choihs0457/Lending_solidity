@@ -253,46 +253,46 @@ contract Testx is Test {
     //     vm.stopPrank();
     // }
 
-    // function testBorrowWithInSufficientCollateralAfterRepaymentFails() external {
-    //     supplyUSDCDepositUser1();
-    //     supplySmallEtherDepositUser2();
+    function testBorrowWithInSufficientCollateralAfterRepaymentFails() external {
+        supplyUSDCDepositUser1();
+        supplySmallEtherDepositUser2();
 
-    //     upsideOracle.setPrice(address(0x0), 4000 ether);
+        upsideOracle.setPrice(address(0x0), 4000 ether);
 
-    //     vm.startPrank(user2);
-    //     {
-    //         (bool success,) = address(lending).call(
-    //             abi.encodeWithSelector(UpsideAcademyLending.borrow.selector, address(usdc), 1000 ether)
-    //         );
-    //         assertTrue(success);
-    //         (success,) = address(lending).call(
-    //             abi.encodeWithSelector(UpsideAcademyLending.borrow.selector, address(usdc), 1000 ether)
-    //         );
-    //         assertTrue(success);
+        vm.startPrank(user2);
+        {
+            (bool success,) = address(lending).call(
+                abi.encodeWithSelector(UpsideAcademyLending.borrow.selector, address(usdc), 1000 ether)
+            );
+            assertTrue(success);
+            (success,) = address(lending).call(
+                abi.encodeWithSelector(UpsideAcademyLending.borrow.selector, address(usdc), 1000 ether)
+            );
+            assertTrue(success);
 
-    //         assertTrue(usdc.balanceOf(user2) == 2000 ether);
+            assertTrue(usdc.balanceOf(user2) == 2000 ether);
 
-    //         usdc.approve(address(lending), type(uint256).max);
+            usdc.approve(address(lending), type(uint256).max);
 
-    //         vm.roll(block.number + 1);
+            vm.roll(block.number + 1);
 
-    //         (success,) = address(lending).call(
-    //             abi.encodeWithSelector(UpsideAcademyLending.repay.selector, address(usdc), 1000 ether)
-    //         );
-    //         assertTrue(success);
+            (success,) = address(lending).call(
+                abi.encodeWithSelector(UpsideAcademyLending.repay.selector, address(usdc), 1000 ether)
+            );
+            assertTrue(success);
 
-    //         (success,) = address(lending).call(
-    //             abi.encodeWithSelector(UpsideAcademyLending.borrow.selector, address(usdc), 1000 ether)
-    //         );
-    //         assertFalse(success);
+            (success,) = address(lending).call(
+                abi.encodeWithSelector(UpsideAcademyLending.borrow.selector, address(usdc), 1000 ether)
+            );
+            assertFalse(success);
 
-    //         (success,) = address(lending).call(
-    //             abi.encodeWithSelector(UpsideAcademyLending.borrow.selector, address(usdc), 999 ether)
-    //         );
-    //         assertTrue(success);
-    //     }
-    //     vm.stopPrank();
-    // }
+            (success,) = address(lending).call(
+                abi.encodeWithSelector(UpsideAcademyLending.borrow.selector, address(usdc), 999 ether)
+            );
+            assertTrue(success);
+        }
+        vm.stopPrank();
+    }
 
     // function testWithdrawInsufficientBalanceFails() external {
     //     vm.deal(user2, 100000000 ether);
@@ -402,34 +402,34 @@ contract Testx is Test {
     //     vm.stopPrank();
     // }
 
-    // function testWithdrawLockedCollateralAfterInterestAccuredFails() external {
-    //     supplyUSDCDepositUser1();
-    //     supplySmallEtherDepositUser2();
+    function testWithdrawLockedCollateralAfterInterestAccuredFails() external {
+        supplyUSDCDepositUser1();
+        supplySmallEtherDepositUser2();
 
-    //     upsideOracle.setPrice(address(0x0), 4000 ether); // 4000 usdc
+        upsideOracle.setPrice(address(0x0), 4000 ether); // 4000 usdc
 
-    //     vm.startPrank(user2);
-    //     {
-    //         (bool success,) = address(lending).call(
-    //             abi.encodeWithSelector(UpsideAcademyLending.borrow.selector, address(usdc), 1000 ether)
-    //         );
-    //         assertTrue(success);
+        vm.startPrank(user2);
+        {
+            (bool success,) = address(lending).call(
+                abi.encodeWithSelector(UpsideAcademyLending.borrow.selector, address(usdc), 1000 ether)
+            );
+            assertTrue(success);
 
-    //         (success,) = address(lending).call(
-    //             abi.encodeWithSelector(UpsideAcademyLending.borrow.selector, address(usdc), 1000 ether)
-    //         );
-    //         assertTrue(success);
+            (success,) = address(lending).call(
+                abi.encodeWithSelector(UpsideAcademyLending.borrow.selector, address(usdc), 1000 ether)
+            );
+            assertTrue(success);
 
-    //         // 2000 / (4000 - 1333) * 100 = 74.xxxx
-    //         // LT = 75%
-    //         vm.roll(block.number + 1000);
-    //         (success,) = address(lending).call(
-    //             abi.encodeWithSelector(UpsideAcademyLending.withdraw.selector, address(0x0), 1 ether * 1333 / 4000)
-    //         );
-    //         assertFalse(success);
-    //     }
-    //     vm.stopPrank();
-    // }
+            // 2000 / (4000 - 1333) * 100 = 74.xxxx
+            // LT = 75%
+            vm.roll(block.number + 1000);
+            (success,) = address(lending).call(
+                abi.encodeWithSelector(UpsideAcademyLending.withdraw.selector, address(0x0), 1 ether * 1333 / 4000)
+            );
+            assertFalse(success);
+        }
+        vm.stopPrank();
+    }
 
     function testWithdrawYieldSucceeds() external {
         usdc.transfer(user3, 30000000 ether);
@@ -525,7 +525,7 @@ contract Testx is Test {
         vm.stopPrank();
 
         vm.roll(block.number + (86400 * 500 / 12));
-        vm.prank(use=r3);
+        vm.prank(user3);
         uint256 a = lending.getAccruedSupplyAmount(address(usdc));
 
         vm.prank(user4);
