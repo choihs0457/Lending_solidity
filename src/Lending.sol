@@ -13,179 +13,198 @@ contract UpsideAcademyLending {
     event LogEvent(uint256 message);
     address public usdc;
 
-    struct S_USDC {
-        uint256 deposit_amount;
-        uint256 borrow_amount;
-        uint256 block_number;
+    struct ACCOUNT {
+        uint256 ETHDepositAmount;
+        uint256 USDCDepositAmount;
+        uint256 BorrowAmount;
+        uint256 DepositInterest;
+        uint256 BorrowInterest;
+        uint256 UpdatedBlock;
+
     }
-
-    struct S_ETH {
-        uint256 deposit_amount;
-        uint256 borrow_amount;
-        uint256 block_number;
-    }
-
-
-    address[] public lender;
-    address[] public borrower;
     
     uint public LT = 75;
     uint public LTV = 50;
     uint public INTEREST_RATE = 1e15;
-    uint public INTEREST_RATE_PER_BLOCK = 100000013881950033;
+    uint public INTEREST_RATE_PER_BLOCK = 1000000138822311089;
     uint public WAD = 1e18;
-    uint public BLOCK_PER_DAY = 7500;
-    uint public total_deposit_USDC;
-    uint public total_deposit_ETH;
-    uint public total_borrow_USDC;
-    uint public total_borrow_ETH;
+    uint public BLOCK_PER_DAY = 7200;
+    uint public TotalDepositUSDC;
+    uint public TotalBorrowUSDC;
+    uint public UpdateBlock;
 
-    mapping(address => S_ETH) public user_ETH;
-    mapping(address => S_USDC) public user_USDC;
-    mapping(address => uint256) public lastBorrowBlock;
+    address[] public lender;
+    address[] public borrower;
 
-    
 
-    mapping(address => uint256) public userBorrow;
-    mapping(address => uint256) public userBorrowInterest;
-    mapping(address => uint256) public tokenDeposits;
-    mapping(address => uint256) public userDepositInterest;
-    mapping(address => mapping(address => uint256)) public tokenUserDeposits;
+    mapping(address => ACCOUNT) public account;
+    mapping(address => bool) public userInit;
 
     constructor(IPriceOracle upsideOracle, address token) {
         price_oracle = upsideOracle;
         usdc = token;
     }
 
-    modifier accrueInterest() {
-        if(user_USDC[msg.sender].block_number < block.number){
-            uint distance = block.number - user_USDC[msg.sender].block_number;
-            uint distance_per_day = distance / BLOCK_PER_DAY;
-            uint distance_block = distance % BLOCK_PER_DAY;
-            uint interest = total_borrow_USDC * pow(WAD + INTEREST_RATE, distance_per_day) - total_borrow_USDC;
-            interest += total_borrow_USDC * pow(INTEREST_RATE_PER_BLOCK, distance_block) - total_borrow_USDC;
-            _;
+    modifier onlyUser() {
+        require(userInit[msg.sender], "not user");
+        _;
+    }
+
+    modifier accrueInterest(address target) {
+        if (UpdateBlock < block.number) {
+            uint i;
+            uint256 distance = block.number - UpdateBlock;
+            uint256 distancePerDay = distance / BLOCK_PER_DAY;
+            uint256 leftDistance = distance % BLOCK_PER_DAY;
+            uint256 interestAccrued = TotalBorrowUSDC;
+            if (distancePerDay > 0) {
+                for (uint i = 0; i < distancePerDay; i++) {
+                interestAccrued = (interestAccrued * (1e18 + INTEREST_RATE)) / 1e18;
+                }
+            }
+            if (leftDistance > 0) {
+                for (uint i = 0; i < leftDistance; i++) {
+                    interestAccrued = (interestAccrued * INTEREST_RATE_PER_BLOCK) / 1e18;
+                }
+            }
+            uint256 interest = interestAccrued - TotalBorrowUSDC;
+            uint256 j = 0;
+            while (j < borrower.length) {
+                if(account[borrower[j]].UpdatedBlock < block.number) {
+                    target = borrower[j];
+                    ACCOUNT memory user = account[target];
+                    user.BorrowInterest += interest * (user.BorrowAmount + user.BorrowInterest) / TotalBorrowUSDC;
+                    user.UpdatedBlock = block.number;
+                    account[target] = user;
+                    }
+                j++;
+            }
+            TotalBorrowUSDC += interest;
+            uint256 k = 0;
+            while (k < lender.length) {
+                if(account[lender[k]].UpdatedBlock < block.number) {
+                    target = lender[k];
+                    ACCOUNT memory user = account[target];
+                    user.DepositInterest += interest * (user.USDCDepositAmount + user.DepositInterest) / TotalDepositUSDC;
+                    user.UpdatedBlock = block.number;
+                    account[target] = user;
+                    }
+                k++;
+            }
+            UpdateBlock = block.number;
         }
+        _;
     }
 
     function initializeLendingProtocol(address token) external payable {
         ERC20(token).transferFrom(msg.sender, address(this), msg.value);
     }
 
-    function deposit(address token, uint256 amount) external payable {
+    function deposit(address token, uint256 amount) accrueInterest(msg.sender) external payable {
+        if (!userInit[msg.sender]) {
+            userInit[msg.sender] = true;
+            account[msg.sender].UpdatedBlock = block.number;
+        }
         if (token == usdc) {
             require(0 < amount, "amount check");
+            account[msg.sender].USDCDepositAmount += amount;
+            TotalDepositUSDC += amount;
             ERC20(token).transferFrom(msg.sender, address(this), amount);
-            user_USDC[msg.sender].deposit_amount += amount;
-            total_deposit_USDC += amount;
+            lender.push(msg.sender);
         } else {
             require(0 < msg.value && amount <= msg.value, "amount check");
-            user_ETH[msg.sender].deposit_amount += amount;
-            total_deposit_ETH += amount;
+            account[msg.sender].ETHDepositAmount += amount;
         }
-        lender.push(msg.sender);
     }
 
-    function borrow(address token, uint256 amount) external accrueInterest {
-        require(total_deposit_USDC >= amount, "check amount");
-        (uint256 eth_price, uint256 usdc_price) = token_price();
-        uint256 max_borrow = calc_max_borrow(eth_price);
-        uint256 possible_borrow = max_borrow - user_USDC[msg.sender].borrow_amount;
-
+    function borrow(address token, uint256 amount) external onlyUser accrueInterest(msg.sender) {
+        require(TotalDepositUSDC >= amount, "check amount");
+        (uint256 ethPrice, uint256 usdcPrice) = tokenPrice();
+        uint256 max_borrow = calc_max_borrow(ethPrice);
+        uint256 possible_borrow = max_borrow - ((account[msg.sender].BorrowAmount + account[msg.sender].BorrowInterest) * usdcPrice / 1 ether);
         require(amount <= possible_borrow, "amount check");
 
-
-        ERC20(token).transfer(msg.sender, amount);
-        total_borrow_ETH += amount;
-        user_USDC[msg.sender].borrow_amount += amount;
         borrower.push(msg.sender);
+        TotalBorrowUSDC += amount;
+        account[msg.sender].BorrowAmount += amount;
+        ERC20(token).transfer(msg.sender, amount);
     }
 
-    function withdraw(address token, uint256 amount) external accrueInterest {
-        require(user_ETH[msg.sender].deposit_amount >= amount, "check amount");
-        uint256 total_debt = user_USDC[msg.sender].borrow_amount;
+    function withdraw(address token, uint256 amount) external onlyUser accrueInterest(msg.sender) {
+        if (token == address(0x00)){
+            require(account[msg.sender].ETHDepositAmount >= amount, "check amount");
+            uint256 total_debt = account[msg.sender].BorrowAmount + account[msg.sender].BorrowInterest;
+            if (0 < total_debt) {
+                (uint256 ethPrice, uint256 usdcPrice) = tokenPrice();
+                uint256 remain_ETH_value = (account[msg.sender].ETHDepositAmount - amount) * ethPrice / 1 ether;
+                uint256 borrow_USDC_value = total_debt * usdcPrice / 1 ether;
+                require(borrow_USDC_value * 100 <= remain_ETH_value * LT, "check amount");
+            }
 
-        if (0 < total_debt) {
-            (uint256 eth_price, uint256 usdc_price) = token_price();
-            uint256 remain_ETH_value = (user_ETH[msg.sender].deposit_amount - amount) * eth_price / 1 ether;
-            uint256 borrow_USDC_value = total_debt * usdc_price / 1 ether;
-            
-            require(borrow_USDC_value * 100 <= remain_ETH_value * LT, "check amount");
+            account[msg.sender].ETHDepositAmount -= amount;
+            payable(msg.sender).transfer(amount);
+        } else {
+            require(account[msg.sender].USDCDepositAmount + account[msg.sender].DepositInterest >= amount, "check amount");
+            account[msg.sender].USDCDepositAmount += account[msg.sender].DepositInterest;
+            account[msg.sender].DepositInterest = 0;
+            account[msg.sender].USDCDepositAmount -= amount;
+            ERC20(token).transfer(msg.sender, amount);
         }
 
-        payable(msg.sender).transfer(amount);
-        total_deposit_ETH -= amount;
-        user_ETH[msg.sender].deposit_amount -= amount;
-
     }
 
-    function repay(address token, uint256 amount) external accrueInterest {
-        uint256 total_debt = user_USDC[msg.sender].borrow_amount;
+    function repay(address token, uint256 amount) external onlyUser accrueInterest(msg.sender) {
+        uint256 total_debt = account[msg.sender].BorrowAmount;
         require(total_debt >= amount, "check amount");
-        user_USDC[msg.sender].borrow_amount -= amount;
-        total_deposit_USDC += amount;
+        account[msg.sender].BorrowAmount -= amount;
+        TotalBorrowUSDC -= amount;
         ERC20(token).transferFrom(msg.sender, address(this), amount);
     }
 
-    function liquidate(address target, address token, uint256 amount) external {
-        (uint256 ethPrice, uint256 usdcPrice) = token_price();
-        uint256 totalDebt = user_USDC[target].borrow_amount;
+    function liquidate(address target, address token, uint256 amount) accrueInterest(target) external {
+        (uint256 ethPrice, uint256 usdcPrice) = tokenPrice();
         
+        uint256 totalDebt = account[target].BorrowAmount + account[target].BorrowInterest;
         require(totalDebt > 0, "No debt to liquidate");
 
-        uint256 remainingETHValue = (user_ETH[target].deposit_amount * ethPrice) / 1 ether;
-        require(totalDebt * 100 > remainingETHValue * LT, "Not eligible for liquidation");
+        uint256 collateralvalueETH = (account[target].ETHDepositAmount * ethPrice) / 1 ether;
+        uint256 totalDebtValue = account[target].BorrowAmount * usdcPrice / 1 ether;
+        require(totalDebtValue * 100 >= collateralvalueETH * LT, "Loan healthy");
 
-        uint256 maxLiquidationAmount;
+        uint256 maxLiquidation;
         if (totalDebt <= 100 ether) {
-            maxLiquidationAmount = totalDebt;
+            maxLiquidation = totalDebt;
         } else {
-            maxLiquidationAmount = totalDebt / 4;
+            maxLiquidation = totalDebt / 4;
         }
-        require(amount <= maxLiquidationAmount, "Exceeds max liquidation amount");
+        require(amount <= maxLiquidation, "Exceeds max liquidation amount");
 
-        uint256 amountValueInETH = (amount * usdcPrice) / ethPrice;
-        require(amountValueInETH <= user_ETH[target].deposit_amount, "Insufficient collateral");
+        require(account[target].BorrowAmount > amount, "amount check plz");
 
-        user_USDC[target].borrow_amount -= amount;
-        total_deposit_USDC += amount;
-        user_ETH[target].deposit_amount -= amountValueInETH;
 
-        ERC20(token).transferFrom(msg.sender, address(this), amount);
-        payable(msg.sender).transfer(amountValueInETH);
+        uint256 collateralToSeize = (amount * usdcPrice) / ethPrice;
+        require(collateralToSeize <= account[target].ETHDepositAmount, "collateral check");
 
-        remainingETHValue = (user_ETH[target].deposit_amount * ethPrice) / 1 ether;
-        totalDebt = user_USDC[target].borrow_amount * usdcPrice / 1 ether;
-        require(totalDebt * 100 <= remainingETHValue * LT, "Post-liquidation check failed");
+        account[target].BorrowAmount -= amount;
+        account[target].ETHDepositAmount -= collateralToSeize;
+
+        IERC20(usdc).transferFrom(msg.sender, address(this), amount);
+        payable(msg.sender).transfer(collateralToSeize);
     }
 
-    function getAccruedSupplyAmount(address token) external accrueInterest returns (uint256) {
+    function getAccruedSupplyAmount(address token) external accrueInterest(msg.sender) returns (uint256) {
+        return account[msg.sender].USDCDepositAmount + account[msg.sender].DepositInterest;
     }
 
-    function token_price() internal returns (uint256, uint256) {
+    function tokenPrice() internal returns (uint256, uint256) {
         uint256 ethPrice = price_oracle.getPrice(address(0x0));
         uint256 usdcPrice = price_oracle.getPrice(usdc);
         return (ethPrice, usdcPrice);
     }
 
     function calc_max_borrow(uint256 price) internal returns (uint256) {
-        uint256 collateralValue = user_ETH[msg.sender].deposit_amount * price / 1 ether;
+        uint256 collateralValue = account[msg.sender].ETHDepositAmount * price / 1 ether;
         return collateralValue * LTV / 100;
-    }
-
-    function pow(uint256 base, uint256 exponent) internal returns (uint256) {
-        uint256 result = base;
-        uint256 x = base;
-
-        while (exponent != 0) {
-            if (exponent % 2 != 0) {
-                result = (result * x) / 1e18;
-            }
-            x = (x * x) / 1e18;
-            exponent /= 2;
-        }
-
-        return result;
     }
 
 }
